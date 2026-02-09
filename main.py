@@ -6,6 +6,22 @@ import sys
 sys.setrecursionlimit(10**6)
 
 
+# data definitions
+class HNode:
+    occurance_count: int
+    character: str
+    left: "HTree"
+    right: "HTree"
+
+
+class Hleaf:
+    occurance_count: int
+    character: str
+
+
+HTree: TypeAlias = Union[HNode, Hleaf]
+
+
 class Tests(unittest.TestCase):
     pass
 
