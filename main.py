@@ -17,7 +17,7 @@ class HNode:
 
 @dataclass
 class HLeaf:
-    occurrence_countc: int
+    occurrence_count: int
     character: str
 
 
