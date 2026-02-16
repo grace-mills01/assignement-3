@@ -122,36 +122,30 @@ def initial_tree_sort(htlist: HTList) -> HTList:
 
 # merge two Htrees to be used in coalesce to combine first two nodes
 def coalesce_helper(Htree1: HTree, Htree2: HTree) -> HTree:
-    sum = Htree1.occurrence_count + Htree2.occurrence_count
-    if ord(Htree1.character) < ord(Htree2.character):
-        char = Htree1.character
-    else:
-        char = Htree2.character
-    return HNode(sum, char, Htree1, Htree2)
+    sum_count = Htree1.occurrence_count + Htree2.occurrence_count
+    char = min(Htree1.character, Htree2.character)
+    return HNode(sum_count, char, Htree1, Htree2)
 
 
 # given a sorted HTList with len over 2 it returns a new HTList that combines the first two nodes of the given HTList
 # to make a new single node where the occurence count is the sum of the two nodes occurence counts
 # and holds the lesser char
 def coalesce_once(htl_sorted: HTList) -> HTList:
-    if list_len(htl_sorted) < 2:
-        raise ValueError("List of given HTList must be greater than 2")
+    if htl_sorted is None or htl_sorted.rest is None:
+        raise ValueError("List must have at least 2 elements")
 
-    match htl_sorted:
-        case None:
-            return None
-        case HTLNode(tree, rest):
-            r = rest
-            merged = coalesce_helper(tree, r.tree)
-            newTree = tree_list_insert(r, merged)
-            return newTree
+    # Merge first two, skip them in the rest of the list
+    merged = coalesce_helper(htl_sorted.tree, htl_sorted.rest.tree)
+    return tree_list_insert(htl_sorted.rest.rest, merged)
 
 
+# merges every two nodes in a HTList untill the function reaches the end of the list
 def coalesce_all(htl_sorted: HTList) -> HTree:
-    if list_len(htl_sorted) == 1:
+    if htl_sorted is None:
+        return None
+    if htl_sorted.rest is None:
         return htl_sorted.tree
-    else:
-        return coalesce_all(coalesce_once(htl_sorted))
+    return coalesce_all(coalesce_once(htl_sorted))
 
 
 # Construct a Huffman tree from 's'.
@@ -279,39 +273,25 @@ class Tests(unittest.TestCase):
         self.assertEqual(initial_tree_sort(self.testHTL2), self.sortedHTL3)
 
     def test_coalesce_once(self):
-        expected1 = (
-            HTLNode(
-                HLeaf(8, "a"),
-                HTLNode(
-                    HLeaf(14, "c"), HTLNode(HLeaf(8, "d"), HTLNode(HLeaf(4, " "), None))
-                ),
-            ),
+        lst = HTLNode(
+            HLeaf(3, "a"), HTLNode(HLeaf(4, "b"), HTLNode(HLeaf(10, "c"), None))
         )
 
-        expected2 = (
-            HTLNode(
-                HLeaf(15, "f"),
-                HTLNode(
-                    HLeaf(8, "c"),
-                    HTLNode(
-                        HLeaf(9, "d"),
-                        HTLNode(HLeaf(4, "e"), HTLNode(HLeaf(6, "u"), None)),
-                    ),
-                ),
-            ),
-        )
-
-        self.assertEqual(coalesce_once(self.testHTL1), expected1)
-        self.assertEqual(coalesce_once(self.testHTL2), expected2)
+        result = coalesce_once(lst)
+        self.assertEqual(result.tree.occurrence_count, 7)
+        self.assertEqual(result.rest.tree.occurrence_count, 10)
 
     def test_coalesce_all(self):
-        expected = HTList = (
-            HTLNode(
-                HLeaf(8, "a"), HTLNode(HLeaf(22, "c"), HTLNode(HLeaf(4, " "), None))
-            ),
-        )
+        leaf_a = HLeaf(3, "a")
+        leaf_b = HLeaf(4, "b")
+        leaf_c = HLeaf(10, "c")
 
-        self.assertEqual(coalesce_all(self.testHTL1), expected)
+        lst = HTLNode(leaf_a, HTLNode(leaf_b, HTLNode(leaf_c, None)))
+        result = coalesce_all(lst)
+
+        self.assertIsInstance(result, HNode)
+        self.assertEqual(result.occurrence_count, 17)
+        self.assertEqual(result.character, "a")
 
     def test_tree_lt(self):
         # Tree 1 has a smaller count than Tree 2
