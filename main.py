@@ -165,6 +165,57 @@ def string_to_HTree(s: str) -> HTree:
 
 class Tests(unittest.TestCase):
 
+    testHTL1: HTList = HTLNode(
+        HLeaf(3, "a"),
+        HTLNode(
+            HLeaf(5, "b"),
+            HTLNode(
+                HLeaf(14, "c"), HTLNode(HLeaf(8, "d"), HTLNode(HLeaf(4, " "), None))
+            ),
+        ),
+    )
+
+    testHTL2: HTList = HTLNode(
+        HLeaf(10, "g"),
+        HTLNode(
+            HLeaf(5, "f"),
+            HTLNode(
+                HLeaf(8, "c"),
+                HTLNode(
+                    HLeaf(9, "d"), HTLNode(HLeaf(4, "e"), HTLNode(HLeaf(6, "u"), None))
+                ),
+            ),
+        ),
+    )
+
+    sortedHTL1: HTList = HTLNode(
+        HLeaf(6, " "),
+        HTLNode(HLeaf(7, "a"), HTLNode(HLeaf(13, " "), None)),
+    )
+
+    sortedHTL2: HTList = HTLNode(
+        HLeaf(3, "a"),
+        HTLNode(
+            HLeaf(4, " "),
+            HTLNode(
+                HLeaf(5, "b"), HTLNode(HLeaf(8, "d"), HTLNode(HLeaf(14, "c"), None))
+            ),
+        ),
+    )
+
+    sortedHTL3: HTList = HTLNode(
+        HLeaf(4, "e"),
+        HTLNode(
+            HLeaf(5, "f"),
+            HTLNode(
+                HLeaf(6, "u"),
+                HTLNode(
+                    HLeaf(8, "c"), HTLNode(HLeaf(9, "d"), HTLNode(HLeaf(10, "g"), None))
+                ),
+            ),
+        ),
+    )
+
     def test_cnt_freq(self):
         empty_str = [0 for _ in range(256)]
         test_1 = [0 for _ in range(256)]
@@ -178,25 +229,89 @@ class Tests(unittest.TestCase):
         self.assertEqual(cnt_freq(""), empty_str)
 
     def test_len(self):
-        pass
+        self.assertEqual(list_len(None), 0)
+        self.assertEqual(list_len(self.testHTL1), 5)
 
     def test_ref(self):
-        pass
+        self.assertEqual(list_ref(self.testHTL1, 2), HLeaf(14, "c"))
+        self.assertEqual(list_ref(self.testHTL2, 4), HLeaf(4, "e"))
 
     def test_base_tree_list(self):
-        pass
+        # Test with a simple frequency list where only 'a' (97) and 'b' (98) have counts
+        freqs = [0] * 256
+        freqs[97] = 5  # 'a'
+        freqs[98] = 10  # 'b'
+
+        result = base_tree_list(freqs)
+
+        # Index 98 should be 'b' with count 10
+        leaf_b = list_ref(result, 98)
+        self.assertEqual(leaf_b.character, "b")
+        self.assertEqual(leaf_b.occurrence_count, 10)
+
+        # Test that a zeroed-out frequency array still produces 256 nodes with 0 counts
+        freqs = [0] * 256
+        result = base_tree_list(freqs)
+
+        # Check the first node (ASCII 0)
+        first_node = list_ref(result, 0)
+        self.assertEqual(first_node.character, chr(0))
+        self.assertEqual(first_node.occurrence_count, 0)
+
+        # Check the last node (ASCII 255)
+        last_node = list_ref(result, 255)
+        self.assertEqual(last_node.character, chr(255))
+        self.assertEqual(last_node.occurrence_count, 0)
 
     def test_tree_list_insert(self):
-        pass
+        input1 = HTLNode(HLeaf(6, " "), HTLNode(HLeaf(7, "a"), None))
+        input2 = HLeaf(13, " ")
+        expected = self.sortedHTL1
+        self.assertEqual(tree_list_insert(input1, input2), expected)
+
+        input3 = HTLNode(HLeaf(7, "a"), HTLNode(HLeaf(13, " "), None))
+        input4 = HLeaf(6, " ")
+        expected = self.sortedHTL1
+        self.assertEqual(tree_list_insert(input3, input4), expected)
 
     def test_initial_tree_sort(self):
-        pass
+        self.assertEqual(initial_tree_sort(self.testHTL1), self.sortedHTL2)
+        self.assertEqual(initial_tree_sort(self.testHTL2), self.sortedHTL3)
 
     def test_coalesce_once(self):
-        pass
+        expected1 = (
+            HTLNode(
+                HLeaf(8, "a"),
+                HTLNode(
+                    HLeaf(14, "c"), HTLNode(HLeaf(8, "d"), HTLNode(HLeaf(4, " "), None))
+                ),
+            ),
+        )
+
+        expected2 = (
+            HTLNode(
+                HLeaf(15, "f"),
+                HTLNode(
+                    HLeaf(8, "c"),
+                    HTLNode(
+                        HLeaf(9, "d"),
+                        HTLNode(HLeaf(4, "e"), HTLNode(HLeaf(6, "u"), None)),
+                    ),
+                ),
+            ),
+        )
+
+        self.assertEqual(coalesce_once(self.testHTL1), expected1)
+        self.assertEqual(coalesce_once(self.testHTL2), expected2)
 
     def test_coalesce_all(self):
-        pass
+        expected = HTList = (
+            HTLNode(
+                HLeaf(8, "a"), HTLNode(HLeaf(22, "c"), HTLNode(HLeaf(4, " "), None))
+            ),
+        )
+
+        self.assertEqual(coalesce_all(self.testHTL1), expected)
 
     def test_tree_lt(self):
         # Tree 1 has a smaller count than Tree 2
