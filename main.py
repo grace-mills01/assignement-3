@@ -156,6 +156,80 @@ def string_to_HTree(s: str) -> HTree:
     sorted_treelist = initial_tree_sort(treelist)
     return coalesce_all(sorted_treelist)
 
+# Creates an encoder array from 'tree'
+def build_encoder_array(tree: HTree) -> list[str]:
+    # Initialize the array with empty strings for all 256 ASCII values
+    encoder_array = [""] * 256
+    
+    # Helper function to perform the recursive traversal
+    def traverse(node: HTree, code: str):
+        match node:
+            case HLeaf(_, char):
+                # When we reach a leaf, store the accumulated code at the character's index
+                encoder_array[ord(char)] = code
+            case HNode(_, _, left, right):
+                # Traverse left (add '0') and right (add '1')
+                traverse(left, code + "0")
+                traverse(right, code + "1")
+    
+    # Start traversal from the root with an empty path string
+    if tree is not None:
+        traverse(tree, "")
+        
+    return encoder_array
+
+# Takes a string and an encoder array, returning a single string of '0's and '1's 
+# representing the Huffman encoding of 'text'.
+def encode_string_one(text: str, encoder_array: list[str]) -> str:
+
+    encoded_chars = []
+
+    for char in text:
+        encoded_chars.append(encoder_array[ord(char)])
+
+    return "".join(encoded_chars)
+
+# Converts 'bits' of '1's and '0's into a bytearray.
+# Pads 'bits' with trailing '0's if the length is not a multiple of 8.
+def bits_to_bytes(bits: str) -> bytearray:
+    remainder = len(bits) % 8
+    if remainder != 0:
+        padding_needed = 8 - remainder
+        bits += '0' * padding_needed
+
+    num_bytes = len(bits) // 8
+    
+    result = bytearray(num_bytes)
+
+    for i in range(num_bytes):
+        start = i * 8
+        end = start + 8
+        byte_str = bits[start:end]
+
+        result[i] = int(byte_str, 2)
+        
+    return result
+
+with open("test_input.txt", "w") as f:
+    f.write("hello huffman! this is a test string.")
+
+# Create a huffman code file read from 'source_path' and wirtten to 'target_path'
+def huffman_code_file(source_path: str, target_path: str) -> None:
+    with open(source_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    tree = string_to_HTree(content)
+
+    encoder_array = build_encoder_array(tree)
+    
+    bit_string = encode_string_one(content, encoder_array)
+    
+    encoded_bytes = bits_to_bytes(bit_string)
+    
+    with open(target_path, 'wb') as f:
+        f.write(encoded_bytes)
+
+huffman_code_file("test_input.txt", "test_output.bin")
 
 class Tests(unittest.TestCase):
 
@@ -316,6 +390,50 @@ class Tests(unittest.TestCase):
         t1 = HLeaf(10, "a")
         t2 = HLeaf(10, "a")
         self.assertFalse(tree_lt(t1, t2))
+
+    def test_build_encoder_array(self):
+        
+        leaf_a = HLeaf(1, "a")
+        leaf_b = HLeaf(1, "b")
+        leaf_c = HLeaf(1, "c")
+        inner_node = HNode(2, "b", leaf_b, leaf_c)
+        root = HNode(3, "a", leaf_a, inner_node)
+
+        encoder = build_encoder_array(root)
+
+        self.assertEqual(encoder[ord('a')], "0")
+        self.assertEqual(encoder[ord('b')], "10")
+        self.assertEqual(encoder[ord('c')], "11")
+
+        self.assertEqual(encoder[ord('d')], "")
+        self.assertEqual(encoder[32], "") 
+        
+        self.assertEqual(len(encoder), 256)
+
+    def test_build_encoder_array_single_leaf(self):
+        leaf_z = HLeaf(5, "z")
+        encoder = build_encoder_array(leaf_z)
+        self.assertEqual(encoder[ord('z')], "")
+
+    def test_encode_string_one(self):
+        encoder = [""] * 256
+        encoder[ord('a')] = "0"
+        encoder[ord('b')] = "10"
+        encoder[ord('c')] = "11"
+        encoder[ord(' ')] = "111"
+
+        self.assertEqual(encode_string_one("abc", encoder), "01011")
+        self.assertEqual(encode_string_one("a ba", encoder), "0111100")
+        self.assertEqual(encode_string_one("", encoder), "")
+        self.assertEqual(encode_string_one("z", encoder), "")
+
+    def test_bits_to_bytes(self):
+        self.assertEqual(bits_to_bytes("01000001"), bytearray([65]))
+        self.assertEqual(bits_to_bytes("1"), bytearray([128]))
+        self.assertEqual(bits_to_bytes("111111111"), bytearray([255, 128]))
+        self.assertEqual(bits_to_bytes("0000000000000001"), bytearray([0, 1]))
+        self.assertEqual(bits_to_bytes(""), bytearray(0))
+        self.assertEqual(bits_to_bytes("10101010"), bytearray([170]))
 
 
 if __name__ == "__main__":
